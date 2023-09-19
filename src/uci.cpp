@@ -254,34 +254,11 @@ namespace Stockfish
             return int(0.5 + 1000 / (1 + std::exp((a - x) / b)));
         }
 
-    } // namespace
-
-    /// UCI::loop() waits for a command from the stdin, parses it and then calls the appropriate
-    /// function. It also intercepts an end-of-file (EOF) indication from the stdin to ensure a
-    /// graceful exit if the GUI dies unexpectedly. When called with some command-line arguments,
-    /// like running 'bench', the function returns immediately after the command is executed.
-    /// In addition to the UCI ones, some additional debug commands are also supported.
-
-    void UCI::loop(int argc, char *argv[])
-    {
-
-        Position pos;
-        std::string token, cmd;
-        StateListPtr states(new std::deque<StateInfo>(1));
-
-        pos.set(StartFEN, false, &states->back(), Threads.main());
-
-        for (int i = 1; i < argc; ++i)
-            cmd += std::string(argv[i]) + " ";
-
-        do
+        /// only for process inputted command
+        void process_command(std::string cmd, Position &pos, StateListPtr &states)
         {
-            if (argc == 1 && !getline(std::cin, cmd)) // Wait for an input or an end-of-file (EOF) indication
-                cmd = "quit";
-
             std::istringstream is(cmd);
-
-            token.clear(); // Avoid a stale if getline() returns nothing or a blank line
+            std::string token;
             is >> std::skipws >> token;
 
             if (token == "quit" || token == "stop")
@@ -341,8 +318,48 @@ namespace Stockfish
                           << sync_endl;
             else if (!token.empty() && token[0] != '#')
                 sync_cout << "Unknown command: '" << cmd << "'. Type help for more information." << sync_endl;
+        }
 
-        } while (token != "quit" && argc == 1); // The command-line arguments are one-shot
+    } // namespace
+
+    /// UCI::loop() waits for a command from the stdin, parses it and then calls the appropriate
+    /// function. It also intercepts an end-of-file (EOF) indication from the stdin to ensure a
+    /// graceful exit if the GUI dies unexpectedly. When called with some command-line arguments,
+    /// like running 'bench', the function returns immediately after the command is executed.
+    /// In addition to the UCI ones, some additional debug commands are also supported.
+
+    void UCI::loop(int argc, char *argv[])
+    {
+        Position pos;
+        std::string cmd;
+        StateListPtr states(new std::deque<StateInfo>(1));
+
+        pos.set(StartFEN, false, &states->back(), Threads.main());
+
+        if (argc > 1)
+        {
+            for (int i = 1; i < argc; i++)
+            {
+                if (std::string(argv[i]) != "/")
+                {
+                    cmd += std::string(argv[i]) + " ";
+                    continue;
+                }
+                sync_cout << "cmd: " << cmd << sync_endl;
+                process_command(cmd, pos, states);
+                // 명령어 1개가 끝났음을 알려주는 구분자
+                sync_cout << "---" << sync_endl;
+                cmd.clear();
+            }
+            return;
+        }
+
+        while (cmd != "quit")
+        {
+            if (!getline(std::cin, cmd)) // Wait for an input or an end-of-file (EOF indication)
+                cmd = "quit";
+            process_command(cmd, pos, states);
+        }
     }
 
     /// Turns a Value to an integer centipawn number,
