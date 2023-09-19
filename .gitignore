@@ -2,7 +2,7 @@
 **/*.o
 **/*.s
 src/.depend
-
+.vscode/
 # Built binary
 src/stockfish*
 src/-lstdc++.res

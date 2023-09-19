@@ -27,12 +27,14 @@
 
 #include "../nnue_common.h"
 
-namespace Stockfish::Eval::NNUE::Layers {
+namespace Stockfish::Eval::NNUE::Layers
+{
 
   // Clipped ReLU
   template <IndexType InDims>
-  class SqrClippedReLU {
-   public:
+  class SqrClippedReLU
+  {
+  public:
     // Input/output type
     using InputType = std::int32_t;
     using OutputType = std::uint8_t;
@@ -46,33 +48,38 @@ namespace Stockfish::Eval::NNUE::Layers {
     using OutputBuffer = OutputType[PaddedOutputDimensions];
 
     // Hash value embedded in the evaluation file
-    static constexpr std::uint32_t get_hash_value(std::uint32_t prevHash) {
+    static constexpr std::uint32_t get_hash_value(std::uint32_t prevHash)
+    {
       std::uint32_t hashValue = 0x538D24C7u;
       hashValue += prevHash;
       return hashValue;
     }
 
     // Read network parameters
-    bool read_parameters(std::istream&) {
+    bool read_parameters(std::istream &)
+    {
       return true;
     }
 
     // Write network parameters
-    bool write_parameters(std::ostream&) const {
+    bool write_parameters(std::ostream &) const
+    {
       return true;
     }
 
     // Forward propagation
     void propagate(
-        const InputType* input, OutputType* output) const {
+        const InputType *input, OutputType *output) const
+    {
 
-  #if defined(USE_SSE2)
+#if defined(USE_SSE2)
       constexpr IndexType NumChunks = InputDimensions / 16;
 
       static_assert(WeightScaleBits == 6);
-      const auto in = reinterpret_cast<const __m128i*>(input);
-      const auto out = reinterpret_cast<__m128i*>(output);
-      for (IndexType i = 0; i < NumChunks; ++i) {
+      const auto in = reinterpret_cast<const __m128i *>(input);
+      const auto out = reinterpret_cast<__m128i *>(output);
+      for (IndexType i = 0; i < NumChunks; ++i)
+      {
         __m128i words0 = _mm_packs_epi32(
             _mm_load_si128(&in[i * 4 + 0]),
             _mm_load_si128(&in[i * 4 + 1]));
@@ -90,11 +97,12 @@ namespace Stockfish::Eval::NNUE::Layers {
       }
       constexpr IndexType Start = NumChunks * 16;
 
-  #else
+#else
       constexpr IndexType Start = 0;
-  #endif
+#endif
 
-      for (IndexType i = Start; i < InputDimensions; ++i) {
+      for (IndexType i = Start; i < InputDimensions; ++i)
+      {
         output[i] = static_cast<OutputType>(
             // really should be /127 but we need to make it fast
             // needs to be accounted for in the trainer
@@ -103,6 +111,6 @@ namespace Stockfish::Eval::NNUE::Layers {
     }
   };
 
-}  // namespace Stockfish::Eval::NNUE::Layers
+} // namespace Stockfish::Eval::NNUE::Layers
 
 #endif // NNUE_LAYERS_SQR_CLIPPED_RELU_H_INCLUDED
