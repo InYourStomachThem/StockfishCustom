@@ -347,10 +347,15 @@ namespace Stockfish
                 }
                 sync_cout << "cmd: " << cmd << sync_endl;
                 process_command(cmd, pos, states);
+                // 움직임 검색 등은 별도의 쓰레드에서 진행되는데, 이런  쓰레드가 끝날 때까지 대기함
+                // = 여러 명령어의 순차적 실행 보장
+                Threads.main()->wait_for_search_finished();
                 // 명령어 1개가 끝났음을 알려주는 구분자
-                sync_cout << "---" << sync_endl;
+                sync_cout << "---splitter---" << sync_endl;
                 cmd.clear();
             }
+            // 매개 변수로 명령어를 실행했을 때, 이것이 완전히 끝났음을 알림
+            sync_cout << "argv commands are complete" << sync_endl;
             return;
         }
 
